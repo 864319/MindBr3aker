@@ -7,17 +7,49 @@
     tools:context=".RobotControlsActivity"
     >
 
-    <io.github.controlwear.virtual.joystick.android.JoystickView
-        xmlns:custom="http://schemas.android.com/apk/res-auto"
+    <io.github.controlwear.virtual.joystick.android.JoystickView xmlns:custom="http://schemas.android.com/apk/res-auto"
         android:id="@+id/movement_joystick"
         android:layout_width="200dp"
         android:layout_height="200dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginBottom="12dp"
+        custom:JV_backgroundColor="#009688"
+        custom:JV_borderColor="#00796B"
+        custom:JV_borderWidth="4dp"
         custom:JV_buttonColor="#FF6E40"
         custom:JV_buttonSizeRatio="15%"
-        custom:JV_borderColor="#00796B"
-        custom:JV_backgroundColor="#009688"
-        custom:JV_borderWidth="4dp"
         custom:JV_fixedCenter="false"
-        />
+        custom:layout_constraintBottom_toBottomOf="parent"
+        custom:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/log"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:text="Log"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/forward_btn"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/backward_btn"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <Button
+        android:id="@+id/backward_btn"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </android.support.constraint.ConstraintLayout>
