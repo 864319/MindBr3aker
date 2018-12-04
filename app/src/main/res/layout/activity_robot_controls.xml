@@ -9,14 +9,14 @@
 
     <io.github.controlwear.virtual.joystick.android.JoystickView xmlns:custom="http://schemas.android.com/apk/res-auto"
         android:id="@+id/movement_joystick"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
         android:layout_marginStart="12dp"
         android:layout_marginBottom="12dp"
-        custom:JV_backgroundColor="#009688"
-        custom:JV_borderColor="#00796B"
+        custom:JV_backgroundColor="@color/colorPrimary"
+        custom:JV_borderColor="@color/colorPrimaryDark"
         custom:JV_borderWidth="4dp"
-        custom:JV_buttonColor="#FF6E40"
+        custom:JV_buttonColor="@color/colorAccent"
         custom:JV_buttonSizeRatio="15%"
         custom:JV_fixedCenter="false"
         custom:layout_constraintBottom_toBottomOf="parent"
@@ -34,22 +34,59 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <Button
-        android:id="@+id/forward_btn"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
+    <ImageView
+        android:id="@+id/color_feedback"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginBottom="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/backward_btn"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:layout_marginTop="8dp"
+        android:background="@color/colorPrimary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/log" />
+
+    <TextView
+        android:id="@+id/distance_txt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="20dp"
+        android:hint="Distance"
+        android:textSize="25sp"
+        app:layout_constraintBottom_toTopOf="@+id/left_btn"
+        app:layout_constraintEnd_toEndOf="@+id/right_btn"
+        app:layout_constraintStart_toStartOf="@+id/left_btn" />
 
     <Button
-        android:id="@+id/backward_btn"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
+        android:id="@+id/right_btn"
+        android:layout_width="@dimen/width_btn"
+        android:layout_height="@dimen/width_btn"
+        android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="8dp"
+        android:background="@drawable/right_arrow"
+        android:backgroundTint="@color/colorPrimary"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        />
+
+
+
+    <Button
+        android:id="@+id/left_btn"
+        android:layout_width="@dimen/width_btn"
+        android:layout_height="@dimen/width_btn"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/left_arrow"
+        android:backgroundTint="@color/colorPrimary"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/right_btn"
+        app:layout_constraintTop_toTopOf="parent" />
+
 
 </android.support.constraint.ConstraintLayout>
