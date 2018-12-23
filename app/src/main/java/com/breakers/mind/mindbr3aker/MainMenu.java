@@ -21,5 +21,14 @@ public class MainMenu extends AppCompatActivity {
                 startActivity(i);
             }
         });
+
+        Button mazeBtn = findViewById(R.id.maze_btn);
+        mazeBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent i = new Intent(MainMenu.this, MazeResolver.class);
+                startActivity(i);
+            }
+        });
     }
 }
