@@ -8,6 +8,7 @@ import android.widget.TextView;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import it.unive.dais.legodroid.lib.EV3;
@@ -33,9 +34,10 @@ public class MazeResolver extends AppCompatActivity {
     private TachoMotor smallMotor;
 
     private LightSensor lightSensor;
+    private UltrasonicSensor ultrasonicSensor;
 
-    private int speedL = 10;
-    private int speedR = speedL-1;
+    private int speedL = 12;
+    private int speedR = speedL-11;
 
     private TextView log;
 
@@ -72,7 +74,7 @@ public class MazeResolver extends AppCompatActivity {
     private final void legomain(EV3.Api api) {
         //inizializzazione riferimenti ai componenti del robot utilizzati
         lightSensor = api.getLightSensor(lightSensorPort);
-        UltrasonicSensor ultrasonicSensor = api.getUltrasonicSensor(ultrasonicSensorPort);
+        ultrasonicSensor = api.getUltrasonicSensor(ultrasonicSensorPort);
         smallMotor = api.getTachoMotor(smallMotorPort);
         rightMotor = api.getTachoMotor(rightMotorPort);
         leftMotor = api.getTachoMotor(leftMotorPort);
@@ -86,10 +88,14 @@ public class MazeResolver extends AppCompatActivity {
                     LightSensor.Color col = colf.get();
                     //runOnUiThread(() -> color = col);
 
-                    followLineToColor(api, LightSensor.Color.RED);
+                    moveHead(api, 1);
+                    moveHead(api, -1);
+
                 } catch (IOException | InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                 }
+
+                break;
             }
 
 
@@ -98,31 +104,41 @@ public class MazeResolver extends AppCompatActivity {
         }
     }
 
+
+
+    int speedLeft = speedL;
+    int speedRight = speedR;
     //fa seguire la linea nera al robot fino al colore specificato come parametro
     private void followLineToColor(EV3.Api api, LightSensor.Color destColor){
         if(lightSensor!=null){
-            AtomicReference<LightSensor.Color> lastColor = new AtomicReference<>();
-            lastColor.set(LightSensor.Color.BLACK);
             try {
+                AtomicBoolean destination = new AtomicBoolean(false);
                 setMotorsSpeed(speedL, speedR);
-                while (!api.ev3.isCancelled()) {    // loop until cancellation signal is fired
+                AtomicBoolean white = new AtomicBoolean(false);
+
+                speedLeft = speedL;
+                speedRight = speedR;
+
+                while (!api.ev3.isCancelled() && !destination.get()) {    // loop until cancellation signal is fired
                     //LIGHT SENSOR
                     Future<LightSensor.Color> colf = lightSensor.getColor();
                     LightSensor.Color col = colf.get();
                     runOnUiThread(() -> {
-                        if (col == LightSensor.Color.WHITE && lastColor.get() !=LightSensor.Color.WHITE) {
-                            lastColor.set(LightSensor.Color.WHITE);
-                            int tempSpeed = speedL;
-                            speedL = speedR;
-                            speedR = tempSpeed;
+                        if (col != LightSensor.Color.WHITE && !white.get()) {
+                            white.set(true);
+
+                            int tempSpeed = speedLeft;
+                            speedLeft = speedRight;
+                            speedRight = tempSpeed;
                             try {
-                                setMotorsSpeed(speedL, speedR);
+                                setMotorsSpeed(speedLeft, speedRight);
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
                         }else {
-                            lastColor.set(col);
+                            white.set(false);
                             if(col == destColor){
+                                destination.set(true);
                                 try {
                                     setMotorsSpeed(0, 0);
                                 } catch (IOException e) {
@@ -145,6 +161,42 @@ public class MazeResolver extends AppCompatActivity {
         }
     }
 
+    private void rotate(EV3.Api api, int direction){
+        if(lightSensor!=null){
+            try {
+                setMotorsSpeed(speedL*direction, speedL*(-direction));
+                AtomicBoolean white = new AtomicBoolean(false);
+                AtomicBoolean white2 = new AtomicBoolean(false);
+                while(!white.get() || !white2.get()){
+                    Future<LightSensor.Color> colf = lightSensor.getColor();
+                    LightSensor.Color col = colf.get();
+                    runOnUiThread(() -> {
+                       if(col == LightSensor.Color.WHITE && !white.get()){
+                           white.set(true);
+
+                       }
+                       if(white.get() && col != LightSensor.Color.WHITE){
+                           white2.set(true);
+                           try {
+                               setMotorsSpeed(0, 0);
+                           } catch (IOException e) {
+                               e.printStackTrace();
+                           }
+                       }
+                    });
+                }
+
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 
     private void setMotorsSpeed(int l, int r) throws IOException {
         if(leftMotor != null && rightMotor!=null){
@@ -152,6 +204,31 @@ public class MazeResolver extends AppCompatActivity {
             leftMotor.start();
             rightMotor.setSpeed(r);
             rightMotor.start();
+        }
+    }
+
+    private void moveHead(EV3.Api api, int direction){
+        try {
+            smallMotor.resetPosition();
+            smallMotor.setStepPower(50*direction,90,0,0, false);
+            smallMotor.start();
+            AtomicReference<Float> pos = new AtomicReference<>((float) 0);
+            while(pos.get() <85){
+                runOnUiThread(()->{
+                    try {
+                        pos.set(smallMotor.getPosition().get());
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
