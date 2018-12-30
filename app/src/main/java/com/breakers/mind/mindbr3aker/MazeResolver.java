@@ -221,10 +221,6 @@ public class MazeResolver extends AppCompatActivity {
                     }
                     //runOnUiThread(() -> color = col);
 
-<<<<<<< HEAD
-                    //moveHead(api, 1);
-                    //moveHead(api, -1);
-=======
 
                     moveHeadLeft();
                     try {
@@ -235,7 +231,6 @@ public class MazeResolver extends AppCompatActivity {
                         e.printStackTrace();
                     }
                     moveHeadLeft();
->>>>>>> origin/master
 
                 } catch (IOException | InterruptedException | ExecutionException e) {
                     e.printStackTrace();
@@ -388,6 +383,7 @@ public class MazeResolver extends AppCompatActivity {
         }
     }
 
+
     private void setMotorsSpeed(int l, int r) throws IOException {
         if(leftMotor != null && rightMotor!=null){
             leftMotor.setSpeed(l);
@@ -446,5 +442,4 @@ public class MazeResolver extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
 }
