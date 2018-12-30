@@ -17,6 +17,8 @@ import it.unive.dais.legodroid.lib.plugs.LightSensor;
 import it.unive.dais.legodroid.lib.plugs.TachoMotor;
 import it.unive.dais.legodroid.lib.plugs.UltrasonicSensor;
 
+import static java.lang.StrictMath.abs;
+
 public class MazeResolver extends AppCompatActivity {
 
     private EV3 ev3;
@@ -36,6 +38,16 @@ public class MazeResolver extends AppCompatActivity {
     private LightSensor lightSensor;
     private UltrasonicSensor ultrasonicSensor;
 
+    private Cell maze[][];
+    private int rows = 4;
+    private int columns = 4;
+    private int row;
+    private int column;
+    private boolean forward;
+    private boolean right;
+    private boolean left;
+    private boolean solved;
+    private int direction;
     private int speedL = 12;
     private int speedR = speedL-11;
 
@@ -78,18 +90,136 @@ public class MazeResolver extends AppCompatActivity {
         smallMotor = api.getTachoMotor(smallMotorPort);
         rightMotor = api.getTachoMotor(rightMotorPort);
         leftMotor = api.getTachoMotor(leftMotorPort);
+        maze = new Cell[rows][columns];
+        direction = 0;
+
+        inizializeMaze(rows, columns);
 
         try {
             int i = 0;
-            while (!api.ev3.isCancelled()) {    // loop until cancellation signal is fired
+            while (!api.ev3.isCancelled() && solved) {    // loop until cancellation signal is fired
                 try {
                     //LIGHT SENSOR
                     Future<LightSensor.Color> colf = lightSensor.getColor();
                     LightSensor.Color col = colf.get();
+
+                    switch (col){
+                        case RED:
+
+                            if(maze[row][column].isVisited()==0) {
+                                if (ultrasonicSensor.getDistance().get() < 15) {
+                                    forward = false;
+                                } else
+                                    forward = true;
+
+                                moveHead(api, 1);
+                                if (ultrasonicSensor.getDistance().get() < 15)
+                                    right = false;
+                                else
+                                    right = true;
+
+                                moveHead(api, -1);
+                                moveHead(api, -1);
+                                if (ultrasonicSensor.getDistance().get() < 15)
+                                    left = false;
+                                else
+                                    left = true;
+
+                                maze[row][column].setVisited();
+                                updateMaze(direction, forward, right, left, row, column);
+                                followLineToColor(api, LightSensor.Color.GREEN);
+                                /*if(!forward){
+                                    if(!right && !left)
+                                        maze[row][column].setBlind(true);
+                                    followLineToColor(api, LightSensor.Color.GREEN);
+                                }
+                                else {
+                                    followLineToColor(api, LightSensor.Color.BLACK);
+
+                                }*/
+                            }
+                            else{
+                                if(!maze[row][column].isBlind()){
+                                    boolean dir[] = maze[row][column].getDirections();
+                                    int walls = 0;
+                                    for(int j = 0; j < dir.length; j++) {
+                                        if (!dir[j])
+                                            walls++;
+                                        else{
+                                            if(j==0)
+                                                if(maze[row+1][column].isBlind())
+                                                    walls++;
+                                            if(j==1)
+                                                if(maze[row][column+1].isBlind())
+                                                    walls++;
+                                            if(j==2)
+                                                if(maze[row-1][column].isBlind())
+                                                    walls++;
+                                            if(j==3)
+                                                if(maze[row][column-1].isBlind())
+                                                    walls++;
+                                        }
+                                    }
+                                    if(walls==3)
+                                        maze[row][column].setBlind(true);
+
+                                }
+                                followLineToColor(api, LightSensor.Color.GREEN);
+                            }
+
+                            break;
+
+                        case BLACK:
+                            followLineToColor(api, LightSensor.Color.RED);
+                            break;
+
+                        //case WHITE:
+
+                        case GREEN:
+                            int newDirection = -1;
+                            boolean found = false;
+                            while(!found) {
+                                newDirection = chooseNextCell(row, column);
+                                if((newDirection==0 && maze[row+1][column].isVisited()==0) ||
+                                    (newDirection==1 && maze[row][column+1].isVisited()==0) ||
+                                        (newDirection==2 && maze[row-1][column].isVisited()==0) ||
+                                            (newDirection==3 && maze[row][column-1].isVisited()==0))
+                                                found = true;
+
+                            }
+
+                            if(newDirection==direction)
+                                followLineToColor(api, LightSensor.Color.RED);
+                            else
+                                if(abs(newDirection-direction)==0)
+                                    maze[row][column].setBlind(true);
+                                else
+                                    if(abs(newDirection-direction)==3)
+                                        rotate(api, (newDirection-direction)/(-3));
+                                    else
+                                        if(abs(newDirection-direction)==2){
+                                            rotate(api, 1);
+                                            rotate(api, 1);
+                                        }
+                                        else
+                                            if(abs(newDirection-direction)==1)
+                                                rotate(api, newDirection-direction);
+
+                            direction = newDirection;
+
+                            break;
+
+                        case BLUE:
+                            for(int z = 1; z < 9; z++)
+                                rotate(api, 1);
+
+                            solved = true;
+                            break;
+                    }
                     //runOnUiThread(() -> color = col);
 
-                    moveHead(api, 1);
-                    moveHead(api, -1);
+                    //moveHead(api, 1);
+                    //moveHead(api, -1);
 
                 } catch (IOException | InterruptedException | ExecutionException e) {
                     e.printStackTrace();
@@ -104,7 +234,52 @@ public class MazeResolver extends AppCompatActivity {
         }
     }
 
+    private void inizializeMaze(int r, int c){
+        for(int i = 0; i < r; i++)
+            for(int j = 0; j < c; j++)
+                maze[i][j] = new Cell(i, j);
+        maze[0][0].setDirections((direction+2)%4, false);
+        row = 0;
+        column = 0;
+        solved = false;
+    }
 
+    private void updateMaze(int d, boolean f, boolean r, boolean l, int row, int col){
+        if(d==1) {
+            maze[row][col].setDirections(0, f);
+            maze[row][col].setDirections(1, r);
+            maze[row][col].setDirections(3, l);
+        }
+        if(d==2) {
+            maze[row][col].setDirections(2, r);
+            maze[row][col].setDirections(1, f);
+            maze[row][col].setDirections(0, l);
+        }
+        if(d==4) {
+            maze[row][col].setDirections(2, l);
+            maze[row][col].setDirections(0, r);
+            maze[row][col].setDirections(3, f);
+        }
+        if(d==3) {
+            maze[row][col].setDirections(2, f);
+            maze[row][col].setDirections(3, r);
+            maze[row][col].setDirections(1, l);
+        }
+    }
+
+    //utilizzare direction per individuare la posizione dell'array relativa al punto cardinale dritto davanti al robot
+    private int chooseNextCell(int row, int col){
+        if(maze[row][col].getDirections()[direction])
+            return direction;
+        else
+            if(maze[row][col].getDirections()[(direction+1)%4])
+                return (direction+1)%4;
+            else
+                if(maze[row][col].getDirections()[(direction+3)%4])
+                    return (direction+3)%4;
+                else
+                    return (direction+2)%4;
+    }
 
     int speedLeft = speedL;
     int speedRight = speedR;
