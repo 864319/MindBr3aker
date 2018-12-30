@@ -1,5 +1,6 @@
 package com.breakers.mind.mindbr3aker;
 
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -38,6 +39,8 @@ public class MazeResolver extends AppCompatActivity {
 
     private int speedL = 12;
     private int speedR = speedL-11;
+
+    private int headRotationPower = 50;
 
     private TextView log;
 
@@ -88,8 +91,16 @@ public class MazeResolver extends AppCompatActivity {
                     LightSensor.Color col = colf.get();
                     //runOnUiThread(() -> color = col);
 
-                    moveHead(api, 1);
-                    moveHead(api, -1);
+
+                    moveHeadLeft();
+                    try {
+                        //set time in mili
+                        Thread.sleep(2000);
+
+                    }catch (Exception e){
+                        e.printStackTrace();
+                    }
+                    moveHeadLeft();
 
                 } catch (IOException | InterruptedException | ExecutionException e) {
                     e.printStackTrace();
@@ -197,7 +208,6 @@ public class MazeResolver extends AppCompatActivity {
         }
     }
 
-
     private void setMotorsSpeed(int l, int r) throws IOException {
         if(leftMotor != null && rightMotor!=null){
             leftMotor.setSpeed(l);
@@ -207,13 +217,21 @@ public class MazeResolver extends AppCompatActivity {
         }
     }
 
-    private void moveHead(EV3.Api api, int direction){
+    private void moveHeadLeft(){
         try {
-            smallMotor.resetPosition();
-            smallMotor.setStepPower(50*direction,90,0,0, false);
+            smallMotor.setStepSpeed(-headRotationPower,90,0,0, false);
+            smallMotor.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void controlObstacles(EV3.Api api){
+        try {
+            smallMotor.setStepPower(-headRotationPower,90,0,0, false);
             smallMotor.start();
             AtomicReference<Float> pos = new AtomicReference<>((float) 0);
-            while(pos.get() <85){
+            while(pos.get()>-90){
                 runOnUiThread(()->{
                     try {
                         pos.set(smallMotor.getPosition().get());
@@ -227,8 +245,26 @@ public class MazeResolver extends AppCompatActivity {
                 });
             }
 
+            smallMotor.setStepPower(headRotationPower,180,0,0, false);
+            smallMotor.start();
+            while(pos.get()<90){
+                runOnUiThread(()->{
+                    try {
+                        pos.set(smallMotor.getPosition().get());
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+            }
+            smallMotor.setStepPower(-headRotationPower,90,0,0, false);
+            smallMotor.start();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
 }
