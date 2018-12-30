@@ -115,14 +115,14 @@ public class MazeResolver extends AppCompatActivity {
                                 } else
                                     forward = true;
 
-                                moveHeadLeft(api, 1);
+                                //moveHeadLeft(api, 1);
                                 if (ultrasonicSensor.getDistance().get() < 15)
                                     right = false;
                                 else
                                     right = true;
 
-                                moveHeadLeft(api, -1);
-                                moveHeadLeft(api, -1);
+                                //moveHeadLeft(api, -1);
+                                //moveHeadLeft(api, -1);
                                 if (ultrasonicSensor.getDistance().get() < 15)
                                     left = false;
                                 else
@@ -131,15 +131,6 @@ public class MazeResolver extends AppCompatActivity {
                                 maze[row][column].setVisited();
                                 updateMaze(direction, forward, right, left, row, column);
                                 followLineToColor(api, LightSensor.Color.GREEN);
-                                /*if(!forward){
-                                    if(!right && !left)
-                                        maze[row][column].setBlind(true);
-                                    followLineToColor(api, LightSensor.Color.GREEN);
-                                }
-                                else {
-                                    followLineToColor(api, LightSensor.Color.BLACK);
-
-                                }*/
                             }
                             else{
                                 if(!maze[row][column].isBlind()){
@@ -278,7 +269,7 @@ public class MazeResolver extends AppCompatActivity {
         }
     }
 
-    //utilizzare direction per individuare la posizione dell'array relativa al punto cardinale dritto davanti al robot
+
     private int chooseNextCell(int row, int col){
         if(maze[row][col].getDirections()[direction])
             return direction;
