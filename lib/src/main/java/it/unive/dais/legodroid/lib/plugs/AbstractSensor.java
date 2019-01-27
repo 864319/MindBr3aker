@@ -18,10 +18,10 @@ public abstract class AbstractSensor extends Plug<EV3.InputPort> {
     protected final int type;
 
     /**
-     * Create an instance of this class given an object of type {@link it.unive.dais.legodroid.lib.EV3.Api}, and input port and the type constant.
+     * Create an instance of this class given an object of type {@link EV3.Api}, and input port and the type constant.
      * This constructor is meant for subclasses specializing a specific sensor.
      *
-     * @param api  an object of type {@link it.unive.dais.legodroid.lib.EV3.Api}.
+     * @param api  an object of type {@link EV3.Api}.
      * @param port input port where the sensor is attached to.
      * @param type type constant, e.g. {@link it.unive.dais.legodroid.lib.comm.Const#EV3_COLOR}.
      */

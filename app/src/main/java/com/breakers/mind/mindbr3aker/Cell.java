@@ -9,6 +9,7 @@ public class Cell {
     private boolean blind;
 
     public Cell(int r, int c){
+        directions = new boolean[4];
         row = r;
         column = c;
         visited = 0;

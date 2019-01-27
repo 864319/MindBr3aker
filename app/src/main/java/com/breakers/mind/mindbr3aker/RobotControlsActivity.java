@@ -74,7 +74,7 @@ public class RobotControlsActivity extends AppCompatActivity {
                 switch (event.getAction()){
                     case MotionEvent.ACTION_DOWN:
                         try {
-                            smallMotor.setPower(head_speed);
+                            smallMotor.setSpeed(head_speed);
                             smallMotor.start();
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -98,7 +98,7 @@ public class RobotControlsActivity extends AppCompatActivity {
                 switch (event.getAction()){
                     case MotionEvent.ACTION_DOWN:
                         try {
-                            smallMotor.setPower(-head_speed);
+                            smallMotor.setSpeed(-head_speed);
                             smallMotor.start();
                         } catch (IOException e) {
                             e.printStackTrace();

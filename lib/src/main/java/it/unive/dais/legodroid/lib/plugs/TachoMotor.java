@@ -6,9 +6,11 @@ import android.util.Log;
 import it.unive.dais.legodroid.lib.EV3;
 import it.unive.dais.legodroid.lib.comm.Bytecode;
 import it.unive.dais.legodroid.lib.comm.Const;
+import it.unive.dais.legodroid.lib.comm.Reply;
 import it.unive.dais.legodroid.lib.util.Prelude;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 // TODO: write more details in the javadoc of these methods
@@ -22,7 +24,7 @@ public class TachoMotor extends Plug<EV3.OutputPort> implements AutoCloseable {
     /**
      * Constructor.
      *
-     * @param api  the object of type {@link it.unive.dais.legodroid.lib.EV3.Api}.
+     * @param api  the object of type {@link EV3.Api}.
      * @param port the output port.
      */
     public TachoMotor(@NonNull EV3.Api api, EV3.OutputPort port) {
@@ -37,7 +39,7 @@ public class TachoMotor extends Plug<EV3.OutputPort> implements AutoCloseable {
     /**
      * Get the current position of the motor in tacho ticks.
      *
-     * @return the current position of the motor in tacho ticks as float.
+     * @return the current position of the motor in tacho ticks.
      * @throws IOException thrown when communication errors occur.
      */
     public Future<Float> getPosition() throws IOException {
@@ -47,8 +49,10 @@ public class TachoMotor extends Plug<EV3.OutputPort> implements AutoCloseable {
 
     /**
      * Get the current speed of the motor.
+     * Returns the current motor speed in tacho counts per second.
+     * Note, this is not necessarily degrees (although it is for LEGO motors).
      *
-     * @return the current position of the motor in tacho ticks as float.
+     * @return the current motor speed in tacho counts per second.
      * @throws IOException thrown when communication errors occur.
      */
     public Future<Float> getSpeed() throws IOException {
@@ -70,6 +74,53 @@ public class TachoMotor extends Plug<EV3.OutputPort> implements AutoCloseable {
         bc.addParameter(port.toBitmask());
         api.sendNoReply(bc);
         Log.d(TAG, "motor clear count");
+    }
+
+    /**
+     * Tests whether the motor is busy or not.
+     *
+     * @throws IOException thrown when communication errors occur.
+     */
+    public Future<Boolean> isBusy() throws IOException {
+        Bytecode bc = new Bytecode();
+        bc.addOpCode(Const.OUTPUT_TEST);
+        bc.addParameter(Const.LAYER_MASTER);
+        bc.addParameter(port.toBitmask());
+        Future<Reply> r = api.send(1, bc);
+        Log.d(TAG, "motor is busy");
+        return api.execAsync(() -> r.get().getData()[0] != 0);
+    }
+
+    /**
+     * Wait until the motor is ready.
+     * This method blocks the caller thread.
+     *
+     * @throws IOException thrown when communication errors occur.
+     */
+     public void waitUntilReady() throws IOException, ExecutionException, InterruptedException {
+        while (isBusy().get()) {
+            if (isBusy().get()) {
+                Log.d(TAG, "motor ready");
+                break;
+            } else {
+                waitCompletion();
+            }
+        }
+    }
+
+    /**
+     * Make the EV3 wait until the current command has been completed.
+     * This method is NOT blocking the caller thread.
+     *
+     * @throws IOException thrown when communication errors occur.
+     */
+    public void waitCompletion() throws IOException {
+        Bytecode bc = new Bytecode();
+        bc.addOpCode(Const.OUTPUT_READY);
+        bc.addParameter(Const.LAYER_MASTER);
+        bc.addParameter(port.toBitmask());
+        api.sendNoReply(bc);
+        Log.d(TAG, "motor wait until ready");
     }
 
     /**
@@ -254,7 +305,7 @@ public class TachoMotor extends Plug<EV3.OutputPort> implements AutoCloseable {
         Bytecode bc = new Bytecode();
         bc.addOpCode(Const.OUTPUT_POLARITY);
         bc.addParameter(Const.LAYER_MASTER);
-        bc.addParameter(port.toByte());
+        bc.addParameter(port.toBitmask());
         bc.addParameter(pol.toByte());
         api.sendNoReply(bc);
         Log.d(TAG, String.format("motor polarity set: %s", pol));

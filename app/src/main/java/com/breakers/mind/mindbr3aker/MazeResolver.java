@@ -1,12 +1,13 @@
 package com.breakers.mind.mindbr3aker;
 
-import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,11 +49,23 @@ public class MazeResolver extends AppCompatActivity {
     private boolean right;
     private boolean left;
     private boolean solved;
-    private int direction;
-    private int speedL = 12;
-    private int speedR = speedL-11;
+    private int direction;/*0-Nord
+                            1-Est
+                            2-Sud
+                            3-Ovest*/
+    private int speedL = 10;
+    private int speedR = 0;
 
-    private int headRotationPower = 50;
+    private int startRow = 0;
+    private int startColumn = 1;
+
+    private LightSensor.Color cellCenter = LightSensor.Color.RED;
+    private LightSensor.Color rotColor = LightSensor.Color.GREEN;
+    private LightSensor.Color finishColor = LightSensor.Color.BLUE;
+
+    private float obsMinDist = 25;
+
+    private int headRotPower = 50;
 
     private TextView log;
 
@@ -62,6 +75,10 @@ public class MazeResolver extends AppCompatActivity {
         setContentView(R.layout.activity_maze_resolver);
 
         log = findViewById(R.id.log_txt);
+
+        direction = 0;
+
+        inizializeMaze(rows, columns);
 
         connectToEv3();
     }
@@ -93,179 +110,112 @@ public class MazeResolver extends AppCompatActivity {
         smallMotor = api.getTachoMotor(smallMotorPort);
         rightMotor = api.getTachoMotor(rightMotorPort);
         leftMotor = api.getTachoMotor(leftMotorPort);
-        maze = new Cell[rows][columns];
-        direction = 0;
 
-        inizializeMaze(rows, columns);
+        while(!solved)
+            mainTask(api);
+    }
 
-        try {
-            int i = 0;
-            while (!api.ev3.isCancelled() && solved) {    // loop until cancellation signal is fired
-                try {
-                    //LIGHT SENSOR
-                    Future<LightSensor.Color> colf = lightSensor.getColor();
-                    LightSensor.Color col = colf.get();
-
-                    switch (col){
-                        case RED:
-
-                            if(maze[row][column].isVisited()==0) {
-                                if (ultrasonicSensor.getDistance().get() < 15) {
-                                    forward = false;
-                                } else
-                                    forward = true;
-
-                                //moveHeadLeft(api, 1);
-                                if (ultrasonicSensor.getDistance().get() < 15)
-                                    right = false;
-                                else
-                                    right = true;
-
-                                //moveHeadLeft(api, -1);
-                                //moveHeadLeft(api, -1);
-                                if (ultrasonicSensor.getDistance().get() < 15)
-                                    left = false;
-                                else
-                                    left = true;
-
-                                maze[row][column].setVisited();
-                                updateMaze(direction, forward, right, left, row, column);
-                                followLineToColor(api, LightSensor.Color.GREEN);
-                            }
-                            else{
-                                if(!maze[row][column].isBlind()){
-                                    boolean dir[] = maze[row][column].getDirections();
-                                    int walls = 0;
-                                    for(int j = 0; j < dir.length; j++) {
-                                        if (!dir[j])
-                                            walls++;
-                                        else{
-                                            if(j==0)
-                                                if(maze[row+1][column].isBlind())
-                                                    walls++;
-                                            if(j==1)
-                                                if(maze[row][column+1].isBlind())
-                                                    walls++;
-                                            if(j==2)
-                                                if(maze[row-1][column].isBlind())
-                                                    walls++;
-                                            if(j==3)
-                                                if(maze[row][column-1].isBlind())
-                                                    walls++;
-                                        }
-                                    }
-                                    if(walls==3)
-                                        maze[row][column].setBlind(true);
-
-                                }
-                                followLineToColor(api, LightSensor.Color.GREEN);
-                            }
-
-                            break;
-
-                        case BLACK:
-                            followLineToColor(api, LightSensor.Color.RED);
-                            break;
-
-                        //case WHITE:
-
-                        case GREEN:
-                            int newDirection = -1;
-                            boolean found = false;
-                            while(!found) {
-                                newDirection = chooseNextCell(row, column);
-                                if((newDirection==0 && maze[row+1][column].isVisited()==0) ||
-                                    (newDirection==1 && maze[row][column+1].isVisited()==0) ||
-                                        (newDirection==2 && maze[row-1][column].isVisited()==0) ||
-                                            (newDirection==3 && maze[row][column-1].isVisited()==0))
-                                                found = true;
-
-                            }
-
-                            if(newDirection==direction)
-                                followLineToColor(api, LightSensor.Color.RED);
-                            else
-                                if(abs(newDirection-direction)==0)
-                                    maze[row][column].setBlind(true);
-                                else
-                                    if(abs(newDirection-direction)==3)
-                                        rotate(api, (newDirection-direction)/(-3));
-                                    else
-                                        if(abs(newDirection-direction)==2){
-                                            rotate(api, 1);
-                                            rotate(api, 1);
-                                        }
-                                        else
-                                            if(abs(newDirection-direction)==1)
-                                                rotate(api, newDirection-direction);
-
-                            direction = newDirection;
-
-                            break;
-
-                        case BLUE:
-                            for(int z = 1; z < 9; z++)
-                                rotate(api, 1);
-
-                            solved = true;
-                            break;
+    private void mainTask(EV3.Api api){
+        if(lightSensor!=null){
+            //vado avanti fino alla prossima cella
+            followLineToColor(api, cellCenter);
+            if(solved)return;
+            //controllo se è già stata visitata
+            //se è già stata visitata controllo se è un vicolo cieco
+            if(maze[row][column].isVisited()==0) {
+                controlObstacles(api);
+                maze[row][column].setVisited();
+            }else{
+                if(!maze[row][column].isBlind()){
+                    boolean dir[] = maze[row][column].getDirections();
+                    int walls = 0;
+                    for(int j = 0; j < dir.length; j++) {
+                        if (!dir[j])
+                            walls++;
+                        else{
+                            if(j==0)
+                                if(maze[row+1][column].isBlind())
+                                    walls++;
+                            if(j==1)
+                                if(maze[row][column+1].isBlind())
+                                    walls++;
+                            if(j==2)
+                                if(maze[row-1][column].isBlind())
+                                    walls++;
+                            if(j==3)
+                                if(maze[row][column-1].isBlind())
+                                    walls++;
+                        }
                     }
-                    //runOnUiThread(() -> color = col);
+                    if(walls==3)
+                        maze[row][column].setBlind(true);
 
-
-                    moveHeadLeft();
-                    try {
-                        //set time in mili
-                        Thread.sleep(2000);
-
-                    }catch (Exception e){
-                        e.printStackTrace();
-                    }
-                    moveHeadLeft();
-
-                } catch (IOException | InterruptedException | ExecutionException e) {
-                    e.printStackTrace();
                 }
-
-                break;
             }
 
+            //calcolo nuova direzione
+            int newDirection = chooseNextCell(row, column);
+            switch (newDirection){
+                case 0:
+                    row = row+1;
+                    break;
 
-        } finally {
+                case 1:
+                    column = column + 1;
+                    break;
+
+                case 2:
+                    row = row-1;
+                    break;
+
+                case 3:
+                    column = column - 1;
+                    break;
+            }
+            //vado avanti fino al punto di rotazione
+            followLineToColor(api, rotColor);
+
+            //gira
+            while (direction!=newDirection){
+                rotate(api, 1);
+                direction = (direction+1)%4;
+            }
 
         }
+
     }
 
     private void inizializeMaze(int r, int c){
+        maze = new Cell[rows][columns];
         for(int i = 0; i < r; i++)
             for(int j = 0; j < c; j++)
                 maze[i][j] = new Cell(i, j);
         maze[0][0].setDirections((direction+2)%4, false);
-        row = 0;
-        column = 0;
+        row = startRow+1;
+        column = startColumn;
         solved = false;
     }
 
     private void updateMaze(int d, boolean f, boolean r, boolean l, int row, int col){
-        if(d==1) {
+        if(d==0) {
             maze[row][col].setDirections(0, f);
             maze[row][col].setDirections(1, r);
             maze[row][col].setDirections(3, l);
         }
-        if(d==2) {
+        if(d==1) {
             maze[row][col].setDirections(2, r);
             maze[row][col].setDirections(1, f);
             maze[row][col].setDirections(0, l);
         }
-        if(d==4) {
-            maze[row][col].setDirections(2, l);
-            maze[row][col].setDirections(0, r);
-            maze[row][col].setDirections(3, f);
+        if(d==2) {
+            maze[row][col].setDirections(3, l);
+            maze[row][col].setDirections(1, r);
+            maze[row][col].setDirections(2, f);
         }
         if(d==3) {
-            maze[row][col].setDirections(2, f);
-            maze[row][col].setDirections(3, r);
-            maze[row][col].setDirections(1, l);
+            maze[row][col].setDirections(3, f);
+            maze[row][col].setDirections(0, r);
+            maze[row][col].setDirections(2, l);
         }
     }
 
@@ -291,18 +241,18 @@ public class MazeResolver extends AppCompatActivity {
             try {
                 AtomicBoolean destination = new AtomicBoolean(false);
                 setMotorsSpeed(speedL, speedR);
-                AtomicBoolean white = new AtomicBoolean(false);
+                AtomicBoolean line = new AtomicBoolean(false);
 
                 speedLeft = speedL;
                 speedRight = speedR;
 
-                while (!api.ev3.isCancelled() && !destination.get()) {    // loop until cancellation signal is fired
+                while (!destination.get()) {    // loop until cancellation signal is fired
                     //LIGHT SENSOR
                     Future<LightSensor.Color> colf = lightSensor.getColor();
                     LightSensor.Color col = colf.get();
                     runOnUiThread(() -> {
-                        if (col != LightSensor.Color.WHITE && !white.get()) {
-                            white.set(true);
+                        if (col == LightSensor.Color.WHITE && line.get()) {
+                            line.set(false);
 
                             int tempSpeed = speedLeft;
                             speedLeft = speedRight;
@@ -312,8 +262,8 @@ public class MazeResolver extends AppCompatActivity {
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
-                        }else {
-                            white.set(false);
+                        }else if(col != LightSensor.Color.WHITE){
+                            line.set(true);
                             if(col == destColor){
                                 destination.set(true);
                                 try {
@@ -321,19 +271,21 @@ public class MazeResolver extends AppCompatActivity {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
-                            }
+                            }/*else if(col==finishColor){
+                                destination.set(true);
+                                solved = true;
+                                try {
+                                    setMotorsSpeed(0, 0);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }*/
                         }
                     });
                 }
 
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException | ExecutionException e) {
                 e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } catch (ExecutionException e) {
-                e.printStackTrace();
-            } finally {
-
             }
         }
     }
@@ -342,24 +294,22 @@ public class MazeResolver extends AppCompatActivity {
         if(lightSensor!=null){
             try {
                 setMotorsSpeed(speedL*direction, speedL*(-direction));
-                AtomicBoolean white = new AtomicBoolean(false);
-                AtomicBoolean white2 = new AtomicBoolean(false);
-                while(!white.get() || !white2.get()){
+                AtomicBoolean line = new AtomicBoolean(true);
+                AtomicBoolean line2 = new AtomicBoolean(false);
+                while(!line2.get()){
                     Future<LightSensor.Color> colf = lightSensor.getColor();
                     LightSensor.Color col = colf.get();
                     runOnUiThread(() -> {
-                       if(col == LightSensor.Color.WHITE && !white.get()){
-                           white.set(true);
-
-                       }
-                       if(white.get() && col != LightSensor.Color.WHITE){
-                           white2.set(true);
-                           try {
-                               setMotorsSpeed(0, 0);
-                           } catch (IOException e) {
-                               e.printStackTrace();
-                           }
-                       }
+                        if(col == LightSensor.Color.WHITE && line.get()){
+                            line.set(false);
+                        }else if(col != LightSensor.Color.WHITE && !line.get()){
+                            line2.set(true);
+                            try {
+                                setMotorsSpeed(0, 0);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
                     });
                 }
 
@@ -373,7 +323,6 @@ public class MazeResolver extends AppCompatActivity {
             }
         }
     }
-
 
     private void setMotorsSpeed(int l, int r) throws IOException {
         if(leftMotor != null && rightMotor!=null){
@@ -384,53 +333,68 @@ public class MazeResolver extends AppCompatActivity {
         }
     }
 
-    private void moveHeadLeft(){
-        try {
-            smallMotor.setStepSpeed(-headRotationPower,90,0,0, false);
-            smallMotor.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     private void controlObstacles(EV3.Api api){
-        try {
-            smallMotor.setStepPower(-headRotationPower,90,0,0, false);
-            smallMotor.start();
-            AtomicReference<Float> pos = new AtomicReference<>((float) 0);
-            while(pos.get()>-90){
-                runOnUiThread(()->{
+        if(ultrasonicSensor!=null && smallMotor!=null){
+            try {
+                smallMotor.resetPosition();
+                AtomicReference<Future<Float>> distance = new AtomicReference<>(ultrasonicSensor.getDistance());
+                final CountDownLatch latch = new CountDownLatch(1);
+                runOnUiThread(() -> {
                     try {
-                        pos.set(smallMotor.getPosition().get());
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                });
-            }
+                        float distForward = distance.get().get(); //<- distanza davanti
+                        forward=distForward>obsMinDist;
+                        Toast.makeText(MazeResolver.this, String.valueOf(distForward), Toast.LENGTH_SHORT).show();
+                        //gira testa a destra e aspetta il completamento del movimento
+                        smallMotor.setStepSpeed(headRotPower,90,0,0,true);
+                        smallMotor.waitCompletion();
 
-            smallMotor.setStepPower(headRotationPower,180,0,0, false);
-            smallMotor.start();
-            while(pos.get()<90){
-                runOnUiThread(()->{
-                    try {
-                        pos.set(smallMotor.getPosition().get());
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
+                        distance.set(ultrasonicSensor.getDistance());
+                        runOnUiThread(() -> {
+                            try {
+                                float distRight = distance.get().get();
+                                right = distRight > obsMinDist;
+
+                                //gira testa a sinistra e aspetta il completamento del movimento
+                                smallMotor.setStepSpeed(-headRotPower,180,0,0,true);
+                                smallMotor.waitCompletion();
+
+                                distance.set(ultrasonicSensor.getDistance());
+                                runOnUiThread(() -> {
+                                    try {
+                                        float distLeft = distance.get().get();
+                                        left = distLeft>obsMinDist;
+
+                                        //torna nella posizione iniziale
+                                        smallMotor.setStepSpeed(headRotPower,90,0,0,true);
+                                        smallMotor.waitCompletion();
+
+                                        //decido direzione in cui girare
+                                        updateMaze(direction, forward, right, left, row, column);
+                                        latch.countDown();
+
+                                    } catch (IOException | InterruptedException | ExecutionException e) {
+                                        e.printStackTrace();
+                                    }
+                                });
+
+                            } catch (IOException | InterruptedException | ExecutionException e) {
+                                e.printStackTrace();
+                            }
+                        });
+                    } catch (IOException | InterruptedException | ExecutionException e) {
                         e.printStackTrace();
                     }
                 });
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            smallMotor.setStepPower(-headRotationPower,90,0,0, false);
-            smallMotor.start();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
+
     }
 }
