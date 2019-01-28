@@ -3,6 +3,8 @@ package com.breakers.mind.mindbr3aker;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -54,16 +56,16 @@ public class MazeResolver extends AppCompatActivity {
                             2-Sud
                             3-Ovest*/
     private int speedL = 10;
-    private int speedR = 0;
+    private int speedR = -2;
 
     private int startRow = 0;
-    private int startColumn = 1;
+    private int startColumn = 0;
 
     private LightSensor.Color cellCenter = LightSensor.Color.RED;
     private LightSensor.Color rotColor = LightSensor.Color.GREEN;
-    private LightSensor.Color finishColor = LightSensor.Color.BLUE;
+    private LightSensor.Color finishColor = LightSensor.Color.BROWN;
 
-    private float obsMinDist = 25;
+    private float obsMinDist = 20;
 
     private int headRotPower = 50;
 
@@ -80,7 +82,8 @@ public class MazeResolver extends AppCompatActivity {
 
         inizializeMaze(rows, columns);
 
-        connectToEv3();
+        Button startBtn = findViewById(R.id.start);
+        startBtn.setOnClickListener(v -> connectToEv3());
     }
 
     private void connectToEv3(){
@@ -125,6 +128,7 @@ public class MazeResolver extends AppCompatActivity {
             if(maze[row][column].isVisited()==0) {
                 controlObstacles(api);
                 maze[row][column].setVisited();
+                if(!right && !left && !forward)maze[row][column].setBlind(true);
             }else{
                 if(!maze[row][column].isBlind()){
                     boolean dir[] = maze[row][column].getDirections();
@@ -172,6 +176,7 @@ public class MazeResolver extends AppCompatActivity {
                     column = column - 1;
                     break;
             }
+
             //vado avanti fino al punto di rotazione
             followLineToColor(api, rotColor);
 
@@ -180,6 +185,7 @@ public class MazeResolver extends AppCompatActivity {
                 rotate(api, 1);
                 direction = (direction+1)%4;
             }
+
 
         }
 
@@ -224,11 +230,11 @@ public class MazeResolver extends AppCompatActivity {
         if(maze[row][col].getDirections()[direction])
             return direction;
         else
-            if(maze[row][col].getDirections()[(direction+1)%4])
-                return (direction+1)%4;
+            if(maze[row][col].getDirections()[(direction+3)%4])
+                return (direction+3)%4;
             else
-                if(maze[row][col].getDirections()[(direction+3)%4])
-                    return (direction+3)%4;
+                if(maze[row][col].getDirections()[(direction+1)%4])
+                    return (direction+1)%4;
                 else
                     return (direction+2)%4;
     }
@@ -264,6 +270,7 @@ public class MazeResolver extends AppCompatActivity {
                             }
                         }else if(col != LightSensor.Color.WHITE){
                             line.set(true);
+                            //if(col == finishColor)solved=true;
                             if(col == destColor){
                                 destination.set(true);
                                 try {
@@ -343,7 +350,6 @@ public class MazeResolver extends AppCompatActivity {
                     try {
                         float distForward = distance.get().get(); //<- distanza davanti
                         forward=distForward>obsMinDist;
-                        Toast.makeText(MazeResolver.this, String.valueOf(distForward), Toast.LENGTH_SHORT).show();
                         //gira testa a destra e aspetta il completamento del movimento
                         smallMotor.setStepSpeed(headRotPower,90,0,0,true);
                         smallMotor.waitCompletion();
