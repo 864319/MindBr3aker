@@ -11,13 +11,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="50dp"
+        android:layout_marginTop="70dp"
         android:layout_marginEnd="8dp"
         android:fontFamily="sans-serif"
         android:gravity="center"
         android:text="@string/AppName"
         android:textColor="@color/colorSecondary"
-        android:textSize="60sp"
+        android:textSize="50sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -31,6 +31,7 @@
         android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
         android:text="@string/HandleMenuBtn"
+        android:textSize="25sp"
         android:textColor="@color/white"
         android:textStyle="bold"
         android:backgroundTint="@color/colorPrimary"
@@ -46,11 +47,37 @@
         android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
         android:text="@string/maze_menu_btn"
+        android:textSize="25sp"
         android:textColor="@color/white"
         android:textStyle="bold"
         android:backgroundTint="@color/colorPrimary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/handle_btn" />
+
+    <ImageView
+        android:layout_width="279dp"
+        android:layout_height="256dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:src="@drawable/mindbr3aker"
+        app:layout_constraintBottom_toTopOf="@+id/imageView2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/maze_btn" />
+
+    <ImageView
+        android:id="@+id/imageView2"
+        android:layout_width="325dp"
+        android:layout_height="90dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="30dp"
+        android:src="@drawable/mindstorm"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </android.support.constraint.ConstraintLayout>

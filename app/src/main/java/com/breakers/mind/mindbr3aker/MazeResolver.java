@@ -5,8 +5,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -55,21 +55,24 @@ public class MazeResolver extends AppCompatActivity {
                             1-Est
                             2-Sud
                             3-Ovest*/
-    private int speedL = 10;
-    private int speedR = -2;
+    private int speedL = -2;
+    private int speedR = 10;
+
+    private int rotationSpeed = 15;
 
     private int startRow = 0;
-    private int startColumn = 0;
+    private int startColumn = 1;
 
     private LightSensor.Color cellCenter = LightSensor.Color.RED;
-    private LightSensor.Color rotColor = LightSensor.Color.GREEN;
-    private LightSensor.Color finishColor = LightSensor.Color.BROWN;
-
     private float obsMinDist = 20;
 
     private int headRotPower = 50;
 
     private TextView log;
+    private EditText xDim;
+    private EditText yDim;
+    private EditText xPos;
+    private EditText yPos;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,16 +85,35 @@ public class MazeResolver extends AppCompatActivity {
 
         inizializeMaze(rows, columns);
 
+        xDim = findViewById(R.id.xDim);
+        yDim = findViewById(R.id.yDim);
+        xPos = findViewById(R.id.xPos);
+        yPos = findViewById(R.id.yPos);
         Button startBtn = findViewById(R.id.start);
-        startBtn.setOnClickListener(v -> connectToEv3());
+        startBtn.setOnClickListener(v -> {
+            if(!xDim.getText().toString().isEmpty() &&
+                !yDim.getText().toString().isEmpty() &&
+                !xPos.getText().toString().isEmpty() &&
+                !yPos.getText().toString().isEmpty()){
+                    columns = Integer.parseInt(xDim.getText().toString());
+                    rows = Integer.parseInt(yDim.getText().toString());
+
+                    startColumn = Integer.parseInt(xPos.getText().toString());
+                    startRow = Integer.parseInt(yPos.getText().toString());
+
+                    connectToEv3();
+            }
+
+        });
     }
 
     private void connectToEv3(){
+        log.setText("Connessione...");
         try {
             //connessione al dispositivo
             ev3 = new EV3(new BluetoothConnection(DEVICE_NAME).connect());
             if(ev3!=null){
-                log.setText("Connected");
+                log.setText("Connesso");
                 try {
                     ev3.run(this::legomain);
                 } catch (EV3.AlreadyRunningException e) {
@@ -99,8 +121,8 @@ public class MazeResolver extends AppCompatActivity {
                 }
             }
         } catch (IOException e) {
-            Log.e(TAG, "Cannot connect to the device ");
-            log.setText("Cannot connect to the device");
+            Log.e(TAG, "Impossibile connettersi al dispositivo ");
+            log.setText("Impossibile connettersi al dispositivo");
             e.printStackTrace();
         }
 
@@ -116,13 +138,15 @@ public class MazeResolver extends AppCompatActivity {
 
         while(!solved)
             mainTask(api);
+
+        log.setText("Risolto");
     }
 
     private void mainTask(EV3.Api api){
         if(lightSensor!=null){
             //vado avanti fino alla prossima cella
             followLineToColor(api, cellCenter);
-            if(solved)return;
+
             //controllo se è già stata visitata
             //se è già stata visitata controllo se è un vicolo cieco
             if(maze[row][column].isVisited()==0) {
@@ -177,8 +201,16 @@ public class MazeResolver extends AppCompatActivity {
                     break;
             }
 
+            if(row>=rows
+                    || row<0
+                    || column>=columns
+                    || column<0){
+                solved = true;
+            }
+
             //vado avanti fino al punto di rotazione
-            followLineToColor(api, rotColor);
+            //followLineToColor(api, rotColor);
+            push();
 
             //gira
             while (direction!=newDirection){
@@ -186,9 +218,32 @@ public class MazeResolver extends AppCompatActivity {
                 direction = (direction+1)%4;
             }
 
-
+            if(solved){
+                followLineToColor(api, cellCenter);
+                celebrate();
+            }
         }
 
+    }
+
+    private void celebrate() {
+        if(rightMotor!=null && leftMotor!=null && smallMotor!=null){
+            try {
+                rightMotor.setStepSpeed(rotationSpeed, 500,0,0,false);
+                leftMotor.setStepSpeed(-rotationSpeed, 500,0,0,false);
+
+                smallMotor.setStepSpeed(headRotPower,45,0,0,false);
+                smallMotor.waitCompletion();
+                smallMotor.setStepSpeed(-headRotPower,90,0,0,false);
+                smallMotor.waitCompletion();
+                smallMotor.setStepSpeed(headRotPower,90,0,0,false);
+                smallMotor.waitCompletion();
+                smallMotor.setStepSpeed(-headRotPower,45,0,0,false);
+                smallMotor.waitCompletion();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void inizializeMaze(int r, int c){
@@ -224,7 +279,6 @@ public class MazeResolver extends AppCompatActivity {
             maze[row][col].setDirections(2, l);
         }
     }
-
 
     private int chooseNextCell(int row, int col){
         if(maze[row][col].getDirections()[direction])
@@ -270,7 +324,6 @@ public class MazeResolver extends AppCompatActivity {
                             }
                         }else if(col != LightSensor.Color.WHITE){
                             line.set(true);
-                            //if(col == finishColor)solved=true;
                             if(col == destColor){
                                 destination.set(true);
                                 try {
@@ -278,15 +331,7 @@ public class MazeResolver extends AppCompatActivity {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
-                            }/*else if(col==finishColor){
-                                destination.set(true);
-                                solved = true;
-                                try {
-                                    setMotorsSpeed(0, 0);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }*/
+                            }
                         }
                     });
                 }
@@ -297,15 +342,31 @@ public class MazeResolver extends AppCompatActivity {
         }
     }
 
+    private void push(){
+        if(rightMotor!=null && leftMotor!=null){
+                try {
+                    rightMotor.setStepSpeed(20, 50,0,0,true);
+                    rightMotor.waitCompletion();
+
+                    leftMotor.setStepSpeed(20, 115,0,0, true);
+                    leftMotor.waitCompletion();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+        }
+    }
+
     private void rotate(EV3.Api api, int direction){
         if(lightSensor!=null){
             try {
-                setMotorsSpeed(speedL*direction, speedL*(-direction));
+                setMotorsSpeed(rotationSpeed*direction, rotationSpeed*(-direction));
                 AtomicBoolean line = new AtomicBoolean(true);
                 AtomicBoolean line2 = new AtomicBoolean(false);
                 while(!line2.get()){
                     Future<LightSensor.Color> colf = lightSensor.getColor();
                     LightSensor.Color col = colf.get();
+                    final CountDownLatch latch = new CountDownLatch(1);
                     runOnUiThread(() -> {
                         if(col == LightSensor.Color.WHITE && line.get()){
                             line.set(false);
@@ -317,7 +378,13 @@ public class MazeResolver extends AppCompatActivity {
                                 e.printStackTrace();
                             }
                         }
+                        latch.countDown();
                     });
+                    try {
+                        latch.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
 
 

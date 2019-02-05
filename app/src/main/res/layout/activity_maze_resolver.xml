@@ -25,7 +25,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:layout_marginTop="20dp"
-        android:text="Dimensioni labirinto: (a partire da 0:0)"
+        android:text="Dimensioni labirinto:"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/log_txt" />
 
@@ -33,25 +33,38 @@
         android:id="@+id/xDim"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginStart="8dp"
-        android:textSize="30sp"
-        android:hint="3"
         android:gravity="center"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView"
-        android:inputType="number"/>
+        android:hint="3"
+        android:inputType="number"
+        android:textSize="@dimen/inputDim"
+        app:layout_constraintEnd_toEndOf="@+id/xPos"
+        app:layout_constraintStart_toStartOf="@+id/xPos"
+        app:layout_constraintTop_toBottomOf="@+id/textView" />
 
     <EditText
-        android:id="@+id/ydim"
+        android:id="@+id/yDim"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginStart="30dp"
-        android:textSize="30sp"
-        android:hint="3"
         android:gravity="center"
-        app:layout_constraintStart_toEndOf="@id/xDim"
-        app:layout_constraintTop_toBottomOf="@+id/textView"
-        android:inputType="number"/>
+        android:hint="3"
+        android:inputType="number"
+        android:textSize="@dimen/inputDim"
+        app:layout_constraintEnd_toEndOf="@+id/yPos"
+        app:layout_constraintStart_toStartOf="@+id/yPos"
+        app:layout_constraintTop_toBottomOf="@+id/textView" />
+
+    <TextView
+        android:id="@+id/textviewper"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:textSize="20sp"
+        android:text="x"
+        app:layout_constraintBottom_toBottomOf="@+id/yDim"
+        app:layout_constraintEnd_toStartOf="@+id/yDim"
+        app:layout_constraintStart_toEndOf="@+id/xDim"
+        app:layout_constraintTop_toTopOf="@+id/yDim" />
 
     <TextView
         android:id="@+id/textView2"
@@ -59,31 +72,55 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:layout_marginTop="20dp"
-        android:text="Posizione iniziale:"
+        android:text="Posizione iniziale:  (a partire da 0:0)"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/xDim" />
+
+    <TextView
+        android:id="@+id/x"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="8dp"
+        android:textSize="@dimen/inputDim"
+        android:text="X:"
+        app:layout_constraintBottom_toBottomOf="@+id/xPos"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView2" />
 
     <EditText
         android:id="@+id/xPos"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginStart="8dp"
-        android:textSize="30sp"
-        android:hint="1"
+        android:layout_marginStart="16dp"
         android:gravity="center"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView2"
-        android:inputType="number"/>
+        android:hint="1"
+        android:inputType="number"
+        android:textSize="@dimen/inputDim"
+        app:layout_constraintStart_toEndOf="@id/x"
+        app:layout_constraintTop_toBottomOf="@+id/textView2" />
+
+    <TextView
+        android:id="@+id/y"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="30dp"
+        android:layout_marginBottom="8dp"
+        android:text="Y:"
+        android:textSize="@dimen/inputDim"
+        app:layout_constraintBottom_toBottomOf="@+id/xPos"
+        app:layout_constraintStart_toEndOf="@+id/xPos"
+        app:layout_constraintTop_toBottomOf="@+id/textView2" />
 
     <EditText
         android:id="@+id/yPos"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginStart="30dp"
-        android:textSize="30sp"
+        android:layout_marginStart="16dp"
+        android:textSize="@dimen/inputDim"
         android:hint="0"
         android:gravity="center"
-        app:layout_constraintStart_toEndOf="@id/xPos"
+        app:layout_constraintStart_toEndOf="@id/y"
         app:layout_constraintTop_toBottomOf="@+id/textView2"
         android:inputType="number"/>
 
